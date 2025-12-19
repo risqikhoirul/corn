@@ -5,20 +5,25 @@
     <title>Corn Aqiela AI 🌽</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
+    <!-- Tailwind -->
     <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- TensorFlow.js -->
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.16.0"></script>
+
+    <!-- Icons -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet" />
 
     <style>
       .glass {
-        background: rgba(255, 255, 255, 0.8);
-        backdrop-filter: blur(12px);
+        background: rgba(255, 255, 255, 0.82);
+        backdrop-filter: blur(14px);
       }
     </style>
   </head>
 
-  <body class="min-h-screen bg-gradient-to-br from-emerald-100 to-lime-100 flex flex-col">
-    <nav class="text-center py-4">
+  <body class="min-h-screen bg-gradient-to-br from-emerald-100 via-green-50 to-lime-100 flex flex-col">
+    <nav class="py-4 text-center">
       <h1 class="text-3xl font-black text-emerald-700">🌽 CORN AQIELA AI</h1>
     </nav>
 
@@ -28,35 +33,35 @@
         <p class="text-center text-sm text-slate-500 mt-1 mb-3">Kamera belakang atau upload foto daun jagung</p>
 
         <!-- CAMERA STATUS -->
-        <div id="cameraStatus" class="mb-3 p-3 rounded-xl bg-yellow-100 border border-yellow-300 text-sm text-yellow-800">📸 Kamera belum diizinkan. Klik <b>Kamera</b> lalu pilih <b>Allow</b>.</div>
+        <div id="cameraStatus" class="mb-3 p-3 rounded-xl bg-yellow-100 border border-yellow-300 text-sm text-yellow-800">📸 Kamera belum diaktifkan. Klik <b>Kamera</b> lalu izinkan akses.</div>
 
-        <!-- CAMERA -->
-        <video id="video" class="hidden w-full h-56 rounded-2xl object-cover shadow"></video>
+        <!-- CAMERA (JANGAN PAKAI hidden DI iOS) -->
+        <video id="video" autoplay playsinline muted class="w-full h-56 rounded-2xl object-cover shadow bg-black" style="display: none"></video>
 
         <!-- PREVIEW -->
-        <img id="previewImg" class="hidden w-full h-56 rounded-2xl object-cover shadow" />
+        <img id="previewImg" class="w-full h-56 rounded-2xl object-cover shadow" style="display: none" />
 
         <!-- BUTTONS -->
         <div class="grid grid-cols-2 gap-3 mt-4">
-          <button onclick="openCamera()" class="py-3 rounded-xl bg-emerald-600 text-white font-semibold"><i class="fas fa-camera"></i> Kamera</button>
+          <button onclick="openCamera()" class="py-3 rounded-xl bg-emerald-600 text-white font-semibold shadow"><i class="fas fa-camera"></i> Kamera</button>
 
-          <label class="py-3 rounded-xl bg-slate-700 text-white font-semibold text-center cursor-pointer">
+          <label class="py-3 rounded-xl bg-slate-700 text-white font-semibold shadow text-center cursor-pointer">
             <i class="fas fa-upload"></i> Upload
             <input type="file" id="fileInput" accept="image/*" hidden />
           </label>
         </div>
 
         <!-- ANALYZE -->
-        <button id="analyzeBtn" class="hidden w-full mt-4 py-4 rounded-2xl bg-gradient-to-r from-emerald-600 to-green-600 text-white font-black">🚀 ANALISIS</button>
+        <button id="analyzeBtn" class="w-full mt-4 py-4 rounded-2xl bg-gradient-to-r from-emerald-600 to-green-600 text-white font-black shadow-xl" style="display: none">🚀 ANALISIS</button>
 
         <!-- SPINNER -->
-        <div id="loadingBox" class="hidden mt-5 text-center text-emerald-700">
+        <div id="loadingBox" class="mt-5 text-center text-emerald-700" style="display: none">
           <i class="fas fa-spinner fa-spin text-4xl"></i>
           <p class="text-sm font-semibold mt-2 animate-pulse">AI sedang menganalisis gambar...</p>
         </div>
 
         <!-- RESULT -->
-        <div id="resultBox" class="hidden mt-4 p-4 rounded-2xl bg-emerald-100 text-center">
+        <div id="resultBox" class="mt-4 p-4 rounded-2xl bg-emerald-100 text-center" style="display: none">
           <h3 id="resultLabel" class="text-xl font-black text-emerald-900"></h3>
           <p id="resultConf" class="text-sm text-emerald-700 mt-1"></p>
         </div>
@@ -70,18 +75,20 @@
       const MODEL_URL = "model/model.json";
       const INPUT_SIZE = 224;
 
-      /* LABEL HARUS SESUAI class_indices.json */
-      const LABELS = ["Cercospora Leaf Spot", "Common Rust", "Northern Leaf Blight", "Healthy"];
+      /* ⚠️ URUTAN HARUS SAMA DENGAN class_indices.json */
+      const LABELS = ["Corn_(maize)___Cercospora_leaf_spot Gray_leaf_spot", "Corn_(maize)___Common_rust_", "Corn_(maize)___Northern_Leaf_Blight", "Corn_(maize)___healthy"];
 
       const LABEL_ID = {
-        "Cercospora Leaf Spot": "🟤 Bercak Daun (Cercospora)",
-        "Common Rust": "🟠 Karat Daun Jagung",
-        "Northern Leaf Blight": "🍂 Hawar Daun Utara",
-        Healthy: "🌱 Jagung Sehat",
+        "Corn_(maize)___Cercospora_leaf_spot Gray_leaf_spot": "🟤 Bercak Daun (Cercospora)",
+        "Corn_(maize)___Common_rust_": "🟠 Karat Daun Jagung",
+        "Corn_(maize)___Northern_Leaf_Blight": "🍂 Hawar Daun Utara",
+        "Corn_(maize)___healthy": "🌱 Jagung Sehat",
       };
 
       /* ================= STATE ================= */
-      let model, stream, imageSource;
+      let model = null;
+      let stream = null;
+      let imageSource = null;
 
       /* ================= ELEMENT ================= */
       const video = document.getElementById("video");
@@ -97,7 +104,7 @@
       /* ================= LOAD MODEL ================= */
       (async () => {
         model = await tf.loadGraphModel(MODEL_URL);
-        console.log("✅ Model loaded");
+        console.log("✅ Model berhasil dimuat");
       })();
 
       /* ================= CAMERA ================= */
@@ -107,20 +114,27 @@
 
           stream = await navigator.mediaDevices.getUserMedia({
             video: { facingMode: { ideal: "environment" } },
+            audio: false,
           });
 
           video.srcObject = stream;
-          video.classList.remove("hidden");
-          previewImg.classList.add("hidden");
-          analyzeBtn.classList.add("hidden");
-          cameraStatus.classList.add("hidden");
-        } catch (e) {
-          cameraStatus.innerText = "🚫 Kamera ditolak. Buka pengaturan browser lalu izinkan kamera.";
-          cameraStatus.classList.remove("hidden");
+          await video.play(); // WAJIB iOS
+
+          video.style.display = "block";
+          previewImg.style.display = "none";
+          analyzeBtn.style.display = "none";
+          resultBox.style.display = "none";
+
+          cameraStatus.innerText = "📸 Kamera aktif. Ketuk layar untuk ambil foto.";
+          cameraStatus.style.display = "block";
+        } catch (err) {
+          cameraStatus.innerText = "🚫 Kamera tidak dapat dibuka.\n" + "Pastikan izin kamera diaktifkan di Safari.";
+          cameraStatus.style.display = "block";
+          console.error(err);
         }
       }
 
-      /* ================= CAPTURE ================= */
+      /* ================= CAPTURE FOTO ================= */
       video.onclick = () => {
         const canvas = document.createElement("canvas");
         canvas.width = video.videoWidth;
@@ -130,11 +144,11 @@
         imageSource = canvas;
         previewImg.src = canvas.toDataURL("image/jpeg");
 
-        video.classList.add("hidden");
-        previewImg.classList.remove("hidden");
-        analyzeBtn.classList.remove("hidden");
+        video.style.display = "none";
+        previewImg.style.display = "block";
+        analyzeBtn.style.display = "block";
 
-        stream.getTracks().forEach((t) => t.stop());
+        if (stream) stream.getTracks().forEach((t) => t.stop());
       };
 
       /* ================= UPLOAD ================= */
@@ -144,9 +158,10 @@
         img.onload = () => {
           imageSource = img;
           previewImg.src = img.src;
-          previewImg.classList.remove("hidden");
-          video.classList.add("hidden");
-          analyzeBtn.classList.remove("hidden");
+          previewImg.style.display = "block";
+          video.style.display = "none";
+          analyzeBtn.style.display = "block";
+          resultBox.style.display = "none";
         };
       };
 
@@ -166,9 +181,9 @@
       analyzeBtn.onclick = async () => {
         if (!model || !imageSource) return;
 
-        analyzeBtn.classList.add("hidden");
-        resultBox.classList.add("hidden");
-        loadingBox.classList.remove("hidden");
+        analyzeBtn.style.display = "none";
+        loadingBox.style.display = "block";
+        resultBox.style.display = "none";
 
         await new Promise(requestAnimationFrame);
         await new Promise((r) => setTimeout(r, 120));
@@ -182,13 +197,14 @@
 
         const labelEN = LABELS[idx];
         resultLabel.innerHTML = LABEL_ID[labelEN] + `<div class="text-xs text-slate-600 mt-1">(${labelEN})</div>`;
+
         resultConf.innerText = `Tingkat Keyakinan: ${(scores[idx] * 100).toFixed(2)}%`;
 
         tensor.dispose();
 
-        loadingBox.classList.add("hidden");
-        resultBox.classList.remove("hidden");
-        analyzeBtn.classList.remove("hidden");
+        loadingBox.style.display = "none";
+        resultBox.style.display = "block";
+        analyzeBtn.style.display = "block";
       };
     </script>
   </body>
