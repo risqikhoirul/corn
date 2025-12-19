@@ -2,106 +2,89 @@
 <html lang="id">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Corn Aqiela AI 🌽</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-    <!-- Tailwind -->
     <script src="https://cdn.tailwindcss.com"></script>
-
-    <!-- TensorFlow.js -->
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
-
-    <!-- Icons -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.16.0"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet" />
 
     <style>
       .glass {
-        background: rgba(255, 255, 255, 0.75);
+        background: rgba(255, 255, 255, 0.8);
         backdrop-filter: blur(12px);
-        border: 1px solid rgba(255, 255, 255, 0.4);
       }
     </style>
   </head>
 
-  <body class="min-h-screen bg-gradient-to-br from-emerald-100 via-green-50 to-lime-100 flex flex-col">
-    <nav class="px-6 py-4 flex justify-between items-center">
-      <h1 class="text-2xl font-black text-emerald-700">🌽 CORN AQIELA AI</h1>
+  <body class="min-h-screen bg-gradient-to-br from-emerald-100 to-lime-100 flex flex-col">
+    <nav class="text-center py-4">
+      <h1 class="text-3xl font-black text-emerald-700">🌽 CORN AQIELA AI</h1>
     </nav>
 
     <main class="flex-grow flex items-center justify-center px-4">
       <div class="glass w-full max-w-md rounded-3xl shadow-2xl p-6">
-        <div class="text-center mb-5">
-          <h2 class="text-3xl font-extrabold text-slate-800">Deteksi Penyakit Jagung</h2>
-          <p class="text-sm text-slate-500 mt-2">Upload atau foto langsung daun jagung 🌿</p>
-        </div>
+        <h2 class="text-2xl font-extrabold text-center">Deteksi Penyakit Jagung</h2>
+        <p class="text-center text-sm text-slate-500 mt-1 mb-3">Kamera belakang atau upload foto daun jagung</p>
 
         <!-- CAMERA STATUS -->
         <div id="cameraStatus" class="mb-3 p-3 rounded-xl bg-yellow-100 border border-yellow-300 text-sm text-yellow-800">📸 Kamera belum diizinkan. Klik <b>Kamera</b> lalu pilih <b>Allow</b>.</div>
 
         <!-- CAMERA -->
-        <div id="cameraBox" class="hidden">
-          <video id="video" autoplay playsinline class="w-full h-56 rounded-2xl object-cover shadow"></video>
-
-          <button onclick="capturePhoto()" class="mt-3 w-full py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-lime-500 text-white font-bold shadow-lg hover:scale-105 transition">📸 Ambil Foto</button>
-        </div>
+        <video id="video" class="hidden w-full h-56 rounded-2xl object-cover shadow"></video>
 
         <!-- PREVIEW -->
-        <div id="previewBox" class="hidden">
-          <img id="previewImg" class="w-full h-56 rounded-2xl object-cover shadow" />
-        </div>
+        <img id="previewImg" class="hidden w-full h-56 rounded-2xl object-cover shadow" />
 
         <!-- BUTTONS -->
         <div class="grid grid-cols-2 gap-3 mt-4">
-          <button onclick="openCamera()" class="py-3 rounded-xl bg-emerald-600 text-white font-semibold shadow hover:bg-emerald-700 transition"><i class="fas fa-camera mr-1"></i> Kamera</button>
+          <button onclick="openCamera()" class="py-3 rounded-xl bg-emerald-600 text-white font-semibold"><i class="fas fa-camera"></i> Kamera</button>
 
-          <label class="py-3 rounded-xl bg-slate-700 text-white font-semibold shadow hover:bg-slate-800 transition text-center cursor-pointer">
-            <i class="fas fa-upload mr-1"></i> Upload
-            <input type="file" id="fileInput" accept="image/*" class="hidden" />
+          <label class="py-3 rounded-xl bg-slate-700 text-white font-semibold text-center cursor-pointer">
+            <i class="fas fa-upload"></i> Upload
+            <input type="file" id="fileInput" accept="image/*" hidden />
           </label>
         </div>
 
         <!-- ANALYZE -->
-        <button id="analyzeBtn" class="hidden w-full mt-4 py-4 rounded-2xl bg-gradient-to-r from-emerald-600 to-green-600 text-white font-black tracking-wide shadow-xl hover:scale-105 transition">🚀 ANALISIS SEKARANG</button>
+        <button id="analyzeBtn" class="hidden w-full mt-4 py-4 rounded-2xl bg-gradient-to-r from-emerald-600 to-green-600 text-white font-black">🚀 ANALISIS</button>
 
         <!-- SPINNER -->
-        <div id="loadingBox" class="hidden mt-6 flex flex-col items-center text-emerald-700">
-          <i class="fas fa-spinner fa-spin text-4xl mb-3"></i>
-          <p class="text-sm font-semibold animate-pulse">AI sedang menganalisis gambar...</p>
+        <div id="loadingBox" class="hidden mt-5 text-center text-emerald-700">
+          <i class="fas fa-spinner fa-spin text-4xl"></i>
+          <p class="text-sm font-semibold mt-2 animate-pulse">AI sedang menganalisis gambar...</p>
         </div>
 
         <!-- RESULT -->
-        <div id="resultBox" class="hidden mt-4 p-4 rounded-2xl bg-emerald-100 border border-emerald-300 text-center">
-          <p class="text-sm text-emerald-700">Hasil Diagnosa</p>
-          <h3 id="resultLabel" class="text-2xl font-black text-emerald-900 mt-1"></h3>
-          <p id="resultConf" class="text-xs text-emerald-700 mt-1"></p>
+        <div id="resultBox" class="hidden mt-4 p-4 rounded-2xl bg-emerald-100 text-center">
+          <h3 id="resultLabel" class="text-xl font-black text-emerald-900"></h3>
+          <p id="resultConf" class="text-sm text-emerald-700 mt-1"></p>
         </div>
       </div>
     </main>
 
-    <footer class="text-center py-6 text-xs text-slate-400">© 2025 INTAN NUR AQIELA • 221101093 🌱</footer>
+    <footer class="text-center py-5 text-xs text-slate-400">© 2025 • Corn Aqiela AI</footer>
 
     <script>
       /* ================= CONFIG ================= */
       const MODEL_URL = "model/model.json";
       const INPUT_SIZE = 224;
 
-      const LABELS = ["Healthy", "Leaf Blight", "Leaf Spot", "Rust"];
+      /* LABEL HARUS SESUAI class_indices.json */
+      const LABELS = ["Cercospora Leaf Spot", "Common Rust", "Northern Leaf Blight", "Healthy"];
+
       const LABEL_ID = {
-        Healthy: "🌱 Daun Jagung Sehat",
-        "Leaf Blight": "🍂 Penyakit Hawar Daun",
-        "Leaf Spot": "🟤 Penyakit Bercak Daun",
-        Rust: "🟠 Penyakit Karat Daun",
+        "Cercospora Leaf Spot": "🟤 Bercak Daun (Cercospora)",
+        "Common Rust": "🟠 Karat Daun Jagung",
+        "Northern Leaf Blight": "🍂 Hawar Daun Utara",
+        Healthy: "🌱 Jagung Sehat",
       };
 
       /* ================= STATE ================= */
-      let model = null;
-      let stream = null;
-      let imageSource = null;
+      let model, stream, imageSource;
 
       /* ================= ELEMENT ================= */
       const video = document.getElementById("video");
-      const cameraBox = document.getElementById("cameraBox");
-      const previewBox = document.getElementById("previewBox");
       const previewImg = document.getElementById("previewImg");
       const analyzeBtn = document.getElementById("analyzeBtn");
       const loadingBox = document.getElementById("loadingBox");
@@ -112,34 +95,33 @@
       const fileInput = document.getElementById("fileInput");
 
       /* ================= LOAD MODEL ================= */
-      tf.loadGraphModel(MODEL_URL).then((m) => {
-        model = m;
+      (async () => {
+        model = await tf.loadGraphModel(MODEL_URL);
         console.log("✅ Model loaded");
-      });
+      })();
 
       /* ================= CAMERA ================= */
       async function openCamera() {
         try {
+          if (stream) stream.getTracks().forEach((t) => t.stop());
+
           stream = await navigator.mediaDevices.getUserMedia({
-            video: {
-              facingMode: { ideal: "environment" }, // 🔥 KAMERA BELAKANG
-            },
-            audio: false,
+            video: { facingMode: { ideal: "environment" } },
           });
 
           video.srcObject = stream;
-
-          cameraStatus.classList.add("hidden");
-          cameraBox.classList.remove("hidden");
-          previewBox.classList.add("hidden");
+          video.classList.remove("hidden");
+          previewImg.classList.add("hidden");
           analyzeBtn.classList.add("hidden");
-        } catch (err) {
-          alert("🚫 Kamera tidak bisa dibuka.\n\n" + "Pastikan izin kamera diaktifkan.\n" + "Jika di HP: buka lewat HTTPS atau localhost.");
-          console.error(err);
+          cameraStatus.classList.add("hidden");
+        } catch (e) {
+          cameraStatus.innerText = "🚫 Kamera ditolak. Buka pengaturan browser lalu izinkan kamera.";
+          cameraStatus.classList.remove("hidden");
         }
       }
 
-      function capturePhoto() {
+      /* ================= CAPTURE ================= */
+      video.onclick = () => {
         const canvas = document.createElement("canvas");
         canvas.width = video.videoWidth;
         canvas.height = video.videoHeight;
@@ -148,12 +130,12 @@
         imageSource = canvas;
         previewImg.src = canvas.toDataURL("image/jpeg");
 
-        cameraBox.classList.add("hidden");
-        previewBox.classList.remove("hidden");
+        video.classList.add("hidden");
+        previewImg.classList.remove("hidden");
         analyzeBtn.classList.remove("hidden");
 
-        if (stream) stream.getTracks().forEach((t) => t.stop());
-      }
+        stream.getTracks().forEach((t) => t.stop());
+      };
 
       /* ================= UPLOAD ================= */
       fileInput.onchange = (e) => {
@@ -162,37 +144,45 @@
         img.onload = () => {
           imageSource = img;
           previewImg.src = img.src;
-          previewBox.classList.remove("hidden");
+          previewImg.classList.remove("hidden");
+          video.classList.add("hidden");
           analyzeBtn.classList.remove("hidden");
         };
       };
 
-      /* ================= PREDICT (SPINNER FIXED) ================= */
+      /* ================= CENTER CROP ================= */
+      function centerCrop(img) {
+        const s = Math.min(img.width, img.height);
+        const x = (img.width - s) / 2;
+        const y = (img.height - s) / 2;
+        const c = document.createElement("canvas");
+        c.width = s;
+        c.height = s;
+        c.getContext("2d").drawImage(img, x, y, s, s, 0, 0, s, s);
+        return c;
+      }
+
+      /* ================= PREDICT ================= */
       analyzeBtn.onclick = async () => {
         if (!model || !imageSource) return;
 
-        // SHOW SPINNER
         analyzeBtn.classList.add("hidden");
         resultBox.classList.add("hidden");
         loadingBox.classList.remove("hidden");
 
-        // FORCE UI RENDER
         await new Promise(requestAnimationFrame);
-        await new Promise((r) => setTimeout(r, 80));
+        await new Promise((r) => setTimeout(r, 120));
 
-        const tensor = tf.browser.fromPixels(imageSource).resizeBilinear([INPUT_SIZE, INPUT_SIZE]).expandDims(0).toFloat().div(255);
+        const cropped = centerCrop(imageSource);
+
+        const tensor = tf.browser.fromPixels(cropped).resizeBilinear([INPUT_SIZE, INPUT_SIZE]).toFloat().div(255).expandDims(0);
 
         const scores = await model.predict(tensor).data();
         const idx = scores.indexOf(Math.max(...scores));
 
         const labelEN = LABELS[idx];
-        const labelID = LABEL_ID[labelEN];
-
-        resultLabel.innerHTML = `
-    ${labelID}<br>
-    <span class="text-sm font-semibold text-slate-600">(${labelEN})</span>
-  `;
-        resultConf.innerText = "Tingkat Keyakinan: " + (scores[idx] * 100).toFixed(2) + "%";
+        resultLabel.innerHTML = LABEL_ID[labelEN] + `<div class="text-xs text-slate-600 mt-1">(${labelEN})</div>`;
+        resultConf.innerText = `Tingkat Keyakinan: ${(scores[idx] * 100).toFixed(2)}%`;
 
         tensor.dispose();
 
