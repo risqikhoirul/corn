@@ -120,15 +120,22 @@
       /* ================= CAMERA ================= */
       async function openCamera() {
         try {
-          stream = await navigator.mediaDevices.getUserMedia({ video: true });
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: {
+              facingMode: { ideal: "environment" }, // 🔥 KAMERA BELAKANG
+            },
+            audio: false,
+          });
+
           video.srcObject = stream;
 
           cameraStatus.classList.add("hidden");
           cameraBox.classList.remove("hidden");
           previewBox.classList.add("hidden");
           analyzeBtn.classList.add("hidden");
-        } catch {
-          alert("🚫 Kamera diblokir.\n\n" + "Buka chrome://settings/content/camera\n" + "Izinkan website ini lalu refresh.");
+        } catch (err) {
+          alert("🚫 Kamera tidak bisa dibuka.\n\n" + "Pastikan izin kamera diaktifkan.\n" + "Jika di HP: buka lewat HTTPS atau localhost.");
+          console.error(err);
         }
       }
 
