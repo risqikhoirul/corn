@@ -2,7 +2,7 @@
 <html lang="id">
   <head>
     <meta charset="UTF-8" />
-    <title>Corn Aqiela AI 🌽</title>
+    <title>Corn Aqiela AI 🌽 • Jagung Detector</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
     <!-- Tailwind -->
@@ -11,64 +11,391 @@
     <!-- TensorFlow.js -->
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.16.0"></script>
 
-    <!-- Icons -->
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet" />
+    <!-- Font Awesome (icons kekinian) -->
+    <link
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
+      rel="stylesheet"
+    />
 
     <style>
+      :root {
+        --glass: rgba(255, 255, 255, 0.14);
+        --glass2: rgba(255, 255, 255, 0.10);
+        --stroke: rgba(255, 255, 255, 0.22);
+        --shadow: rgba(0, 0, 0, 0.18);
+        --neon: rgba(16, 185, 129, 0.45);
+      }
+
+      /* ====== Background: 3D Hamparan Jagung Estetik ====== */
+      body {
+        /* overlay cinematic supaya UI tetap kebaca */
+        background:
+          radial-gradient(1200px 700px at 20% 15%, rgba(255, 200, 80, 0.25), transparent 55%),
+          radial-gradient(900px 600px at 85% 25%, rgba(16, 185, 129, 0.18), transparent 55%),
+          linear-gradient(to bottom, rgba(0,0,0,0.55), rgba(0,0,0,0.35)),
+          url("https://images.unsplash.com/photo-1501004318641-b39e6451bec6?auto=format&fit=crop&w=2000&q=80");
+        background-size: cover;
+        background-position: center;
+        background-repeat: no-repeat;
+
+        /* desktop: parallax feel, mobile fallback di bawah */
+        background-attachment: fixed;
+
+        overflow-x: hidden;
+      }
+
+      /* iOS/mobile fix: background-attachment fixed sering glitch */
+      @media (max-width: 768px) {
+        body {
+          background-attachment: scroll;
+        }
+      }
+
+      /* animated blobs */
+      .blob {
+        position: absolute;
+        width: 420px;
+        height: 420px;
+        filter: blur(45px);
+        opacity: 0.55;
+        border-radius: 9999px;
+        transform: translate3d(0,0,0);
+        mix-blend-mode: multiply;
+      }
+      .blob.b1 { background: rgba(16,185,129,.45); top: -120px; left: -120px; animation: float1 10s ease-in-out infinite; }
+      .blob.b2 { background: rgba(34,197,94,.35); top: 18%; right: -140px; animation: float2 12s ease-in-out infinite; }
+      .blob.b3 { background: rgba(132,204,22,.30); bottom: -160px; left: 18%; animation: float3 14s ease-in-out infinite; }
+
+      @keyframes float1 { 0%,100% { transform: translate(0,0) scale(1);} 50% { transform: translate(70px, 60px) scale(1.05);} }
+      @keyframes float2 { 0%,100% { transform: translate(0,0) scale(1);} 50% { transform: translate(-60px, 70px) scale(1.08);} }
+      @keyframes float3 { 0%,100% { transform: translate(0,0) scale(1);} 50% { transform: translate(70px, -60px) scale(1.07);} }
+
+      /* subtle noise overlay */
+      .noise {
+        pointer-events: none;
+        position: fixed;
+        inset: 0;
+        opacity: 0.08;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='250' height='250'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='250' height='250' filter='url(%23n)' opacity='.35'/%3E%3C/svg%3E");
+        mix-blend-mode: overlay;
+      }
+
+      /* ====== Glass card + 3D tilt ====== */
       .glass {
-        background: rgba(255, 255, 255, 0.82);
-        backdrop-filter: blur(14px);
+        background: linear-gradient(180deg, var(--glass), var(--glass2));
+        border: 1px solid var(--stroke);
+        box-shadow:
+          0 30px 70px var(--shadow),
+          0 0 0 1px rgba(255,255,255,0.06) inset;
+        backdrop-filter: blur(18px);
+        -webkit-backdrop-filter: blur(18px);
+        transform-style: preserve-3d;
+      }
+      .card-tilt {
+        transition: transform 200ms ease, box-shadow 200ms ease;
+        will-change: transform;
+      }
+
+      /* shimmer for headings */
+      .shimmer {
+        background: linear-gradient(90deg, rgba(16,185,129,.95), rgba(34,197,94,.95), rgba(132,204,22,.95));
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+        background-size: 200% 100%;
+        animation: shimmer 4s ease infinite;
+      }
+      @keyframes shimmer { 0% { background-position: 0% 50%; } 100% { background-position: 200% 50%; } }
+
+      /* button ripple */
+      .ripple {
+        position: relative;
+        overflow: hidden;
+      }
+      .ripple:after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: radial-gradient(circle at var(--x, 50%) var(--y, 50%), rgba(255,255,255,.35), transparent 45%);
+        opacity: 0;
+        transition: opacity 450ms ease;
+      }
+      .ripple:active:after { opacity: 1; transition: opacity 0ms; }
+
+      /* neon ring */
+      .neon-ring {
+        box-shadow: 0 0 0 1px rgba(16,185,129,.25) inset, 0 10px 40px rgba(16,185,129,.18);
+      }
+
+      /* skeleton pulse */
+      .pulse-soft { animation: pulseSoft 1.2s ease-in-out infinite; }
+      @keyframes pulseSoft { 0%,100% { opacity: .65; } 50% { opacity: 1; } }
+
+      /* progress bar */
+      .progress-track { background: rgba(255,255,255,.18); border: 1px solid rgba(255,255,255,.18); }
+      .progress-bar {
+        width: 0%;
+        transition: width 650ms cubic-bezier(.2,.8,.2,1);
+      }
+
+      /* video / img frame */
+      .frame {
+        border-radius: 1.25rem;
+        background: rgba(0,0,0,.55);
+        border: 1px solid rgba(255,255,255,.16);
+        box-shadow: 0 20px 60px rgba(0,0,0,.25);
+      }
+
+      /* toast */
+      .toast {
+        transform: translateY(-16px);
+        opacity: 0;
+        pointer-events: none;
+        transition: all 250ms ease;
+      }
+      .toast.show { transform: translateY(0); opacity: 1; }
+
+      /* small 3d badge */
+      .badge3d {
+        box-shadow: 0 12px 30px rgba(16,185,129,.20);
+        border: 1px solid rgba(255,255,255,.22);
+      }
+
+      /* reduced motion respect */
+      @media (prefers-reduced-motion: reduce) {
+        .blob, .shimmer, .pulse-soft { animation: none !important; }
+        .card-tilt { transition: none !important; }
       }
     </style>
   </head>
 
-  <body class="min-h-screen bg-gradient-to-br from-emerald-100 via-green-50 to-lime-100 flex flex-col">
-    <nav class="py-4 text-center">
-      <h1 class="text-3xl font-black text-emerald-700">🌽 CORN AQIELA AI</h1>
-    </nav>
+  <body class="min-h-screen flex flex-col">
+    <!-- 3D background -->
+    <div class="blob b1"></div>
+    <div class="blob b2"></div>
+    <div class="blob b3"></div>
+    <div class="noise"></div>
 
-    <main class="flex-grow flex items-center justify-center px-4">
-      <div class="glass w-full max-w-md rounded-3xl shadow-2xl p-6">
-        <h2 class="text-2xl font-extrabold text-center">Deteksi Penyakit Jagung</h2>
-        <p class="text-center text-sm text-slate-500 mt-1 mb-3">Kamera belakang atau upload foto daun jagung</p>
-
-        <!-- CAMERA STATUS -->
-        <div id="cameraStatus" class="mb-3 p-3 rounded-xl bg-yellow-100 border border-yellow-300 text-sm text-yellow-800">📸 Kamera belum diaktifkan. Klik <b>Kamera</b> lalu izinkan akses.</div>
-
-        <!-- CAMERA (JANGAN PAKAI hidden DI iOS) -->
-        <video id="video" autoplay playsinline muted class="w-full h-56 rounded-2xl object-cover shadow bg-black" style="display: none"></video>
-
-        <!-- PREVIEW -->
-        <img id="previewImg" class="w-full h-56 rounded-2xl object-cover shadow" style="display: none" />
-
-        <!-- BUTTONS -->
-        <div class="grid grid-cols-2 gap-3 mt-4">
-          <button onclick="openCamera()" class="py-3 rounded-xl bg-emerald-600 text-white font-semibold shadow"><i class="fas fa-camera"></i> Kamera</button>
-
-          <label class="py-3 rounded-xl bg-slate-700 text-white font-semibold shadow text-center cursor-pointer">
-            <i class="fas fa-upload"></i> Upload
-            <input type="file" id="fileInput" accept="image/*" hidden />
-          </label>
+    <!-- Top bar -->
+    <header class="relative z-10 px-4 pt-6 pb-3">
+      <div class="max-w-5xl mx-auto flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div class="w-11 h-11 rounded-2xl bg-white/30 border border-white/20 shadow-lg grid place-items-center badge3d">
+            <span class="text-xl">🌽</span>
+          </div>
+          <div>
+            <h1 class="text-xl sm:text-2xl font-black shimmer leading-tight">CORN AQIELA AI</h1>
+            <p class="text-xs text-slate-600/80 -mt-0.5">Deteksi penyakit daun jagung • TFJS on-device</p>
+          </div>
         </div>
 
-        <!-- ANALYZE -->
-        <button id="analyzeBtn" class="w-full mt-4 py-4 rounded-2xl bg-gradient-to-r from-emerald-600 to-green-600 text-white font-black shadow-xl" style="display: none">🚀 ANALISIS</button>
-
-        <!-- SPINNER -->
-        <div id="loadingBox" class="mt-5 text-center text-emerald-700" style="display: none">
-          <i class="fas fa-spinner fa-spin text-4xl"></i>
-          <p class="text-sm font-semibold mt-2 animate-pulse">AI sedang menganalisis gambar...</p>
-        </div>
-
-        <!-- RESULT -->
-        <div id="resultBox" class="mt-4 p-4 rounded-2xl bg-emerald-100 text-center" style="display: none">
-          <h3 id="resultLabel" class="text-xl font-black text-emerald-900"></h3>
-          <p id="resultConf" class="text-sm text-emerald-700 mt-1"></p>
+        <div class="hidden sm:flex items-center gap-2 text-xs text-slate-700/80">
+          <span class="px-3 py-1 rounded-full bg-white/35 border border-white/20 shadow-sm">
+            <i class="fa-solid fa-shield-heart mr-1"></i> Privasi: tidak upload otomatis
+          </span>
         </div>
       </div>
-    </main>
+    </header>
 
-    <footer class="text-center py-5 text-xs text-slate-400">© 2025 • Corn Aqiela AI</footer>
+    <!-- Toast -->
+    <div class="fixed top-4 left-0 right-0 z-50 px-4">
+      <div id="toast" class="toast max-w-md mx-auto glass rounded-2xl px-4 py-3 neon-ring">
+        <div class="flex items-start gap-3">
+          <div id="toastIcon" class="mt-0.5 text-emerald-700 text-lg">
+            <i class="fa-solid fa-circle-info"></i>
+          </div>
+          <div class="flex-1">
+            <p id="toastText" class="text-sm font-semibold text-slate-800">Status</p>
+            <p id="toastSub" class="text-xs text-slate-600/90">Keterangan</p>
+          </div>
+          <button id="toastClose" class="text-slate-600 hover:text-slate-900 transition">
+            <i class="fa-solid fa-xmark"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main -->
+    <main class="relative z-10 flex-grow flex items-center justify-center px-4 pb-10">
+      <div class="w-full max-w-md">
+        <!-- Card -->
+        <section id="tiltCard" class="glass card-tilt rounded-[28px] p-6 sm:p-7 neon-ring">
+          <!-- header row -->
+          <div class="flex items-center justify-between">
+            <div>
+              <h2 class="text-2xl font-black text-slate-900 tracking-tight">
+                Deteksi Penyakit <span class="shimmer">Jagung</span>
+              </h2>
+              <p class="text-sm text-slate-600 mt-1">
+                Pakai kamera belakang atau upload foto daun jagung.
+              </p>
+            </div>
+            <div class="w-10 h-10 rounded-2xl bg-white/35 border border-white/20 shadow grid place-items-center">
+              <!-- Lucide-like scan icon (inline svg) -->
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" class="opacity-90">
+                <path d="M4 7V6a2 2 0 0 1 2-2h1" stroke="rgba(15,23,42,.85)" stroke-width="2" stroke-linecap="round"/>
+                <path d="M20 7V6a2 2 0 0 0-2-2h-1" stroke="rgba(15,23,42,.85)" stroke-width="2" stroke-linecap="round"/>
+                <path d="M4 17v1a2 2 0 0 0 2 2h1" stroke="rgba(15,23,42,.85)" stroke-width="2" stroke-linecap="round"/>
+                <path d="M20 17v1a2 2 0 0 1-2 2h-1" stroke="rgba(15,23,42,.85)" stroke-width="2" stroke-linecap="round"/>
+                <path d="M7 12h10" stroke="rgba(16,185,129,.95)" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+            </div>
+          </div>
+
+          <!-- status card -->
+          <div id="cameraStatus" class="mt-4 p-4 rounded-2xl bg-white/30 border border-white/20 text-sm text-slate-700">
+            <div class="flex items-start gap-3">
+              <div class="text-emerald-700 text-lg mt-0.5">
+                <i class="fa-solid fa-camera-retro"></i>
+              </div>
+              <div class="flex-1">
+                <p class="font-bold">Kamera belum aktif.</p>
+                <p class="text-xs text-slate-600 mt-0.5">
+                  Klik <b>Kamera</b> lalu izinkan akses. (iPhone: Safari → izinkan kamera)
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <!-- media frame -->
+          <div class="mt-4 frame overflow-hidden">
+            <!-- CAMERA (JANGAN hidden DI iOS) -->
+            <video
+              id="video"
+              autoplay
+              playsinline
+              muted
+              class="w-full h-56 object-cover"
+              style="display: none"
+            ></video>
+
+            <!-- PREVIEW -->
+            <img
+              id="previewImg"
+              class="w-full h-56 object-cover"
+              alt="Preview"
+              style="display: none"
+            />
+
+            <!-- overlay hints -->
+            <div id="hintOverlay" class="absolute pointer-events-none" style="display:none"></div>
+          </div>
+
+          <!-- actions -->
+          <div class="grid grid-cols-2 gap-3 mt-4">
+            <button
+              id="cameraBtn"
+              class="ripple py-3.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-green-600 text-white font-extrabold shadow-lg hover:shadow-xl hover:-translate-y-[1px] transition flex items-center justify-center gap-2"
+              onclick="openCamera()"
+            >
+              <i class="fa-solid fa-camera"></i>
+              <span>Kamera</span>
+            </button>
+
+            <label
+              class="ripple py-3.5 rounded-2xl bg-slate-900/80 text-white font-extrabold shadow-lg hover:shadow-xl hover:-translate-y-[1px] transition text-center cursor-pointer flex items-center justify-center gap-2"
+            >
+              <i class="fa-solid fa-cloud-arrow-up"></i>
+              <span>Upload</span>
+              <input type="file" id="fileInput" accept="image/*" hidden />
+            </label>
+          </div>
+
+          <!-- analyze -->
+          <button
+            id="analyzeBtn"
+            class="ripple w-full mt-4 py-4 rounded-2xl bg-gradient-to-r from-emerald-600 via-green-600 to-lime-500 text-white font-black shadow-xl hover:shadow-2xl hover:-translate-y-[1px] transition"
+            style="display: none"
+          >
+            <span class="inline-flex items-center justify-center gap-2">
+              <i class="fa-solid fa-wand-magic-sparkles"></i>
+              <span>ANALISIS SEKARANG</span>
+            </span>
+          </button>
+
+          <!-- loading -->
+          <div id="loadingBox" class="mt-5" style="display: none">
+            <div class="glass rounded-2xl p-4 border border-white/20">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                  <div class="text-emerald-700 text-2xl">
+                    <i class="fa-solid fa-spinner fa-spin"></i>
+                  </div>
+                  <div>
+                    <p class="text-sm font-black text-slate-900">AI sedang menganalisis...</p>
+                    <p class="text-xs text-slate-600 pulse-soft">Ekstraksi fitur daun & klasifikasi penyakit</p>
+                  </div>
+                </div>
+                <span id="loadingPct" class="text-xs font-black text-emerald-800">0%</span>
+              </div>
+
+              <div class="mt-3 progress-track rounded-full overflow-hidden h-3">
+                <div id="progressBar" class="progress-bar h-3 rounded-full bg-emerald-500"></div>
+              </div>
+
+              <p class="text-[11px] text-slate-600 mt-3">
+                Tips: Foto fokus, pencahayaan cukup, daun memenuhi frame.
+              </p>
+            </div>
+          </div>
+
+          <!-- result -->
+          <div id="resultBox" class="mt-4" style="display: none">
+            <div class="glass rounded-2xl p-4 border border-white/20">
+              <div class="flex items-start gap-3">
+                <div class="w-10 h-10 rounded-2xl bg-white/35 border border-white/20 shadow grid place-items-center">
+                  <i class="fa-solid fa-chart-simple text-emerald-700"></i>
+                </div>
+                <div class="flex-1">
+                  <h3 id="resultLabel" class="text-lg font-black text-slate-900"></h3>
+                  <p id="resultConf" class="text-sm text-emerald-800 mt-0.5 font-bold"></p>
+                  <p id="resultSub" class="text-xs text-slate-600 mt-1"></p>
+                </div>
+              </div>
+
+              <!-- top-2 list -->
+              <div class="mt-4 space-y-2" id="topList"></div>
+
+              <!-- quick actions -->
+              <div class="grid grid-cols-2 gap-3 mt-4">
+                <button
+                  id="reTakeBtn"
+                  class="ripple py-3 rounded-2xl bg-white/35 border border-white/20 font-extrabold text-slate-800 hover:-translate-y-[1px] transition flex items-center justify-center gap-2"
+                >
+                  <i class="fa-solid fa-rotate-left"></i>
+                  <span>Ulangi</span>
+                </button>
+                <button
+                  id="copyBtn"
+                  class="ripple py-3 rounded-2xl bg-emerald-700/90 text-white font-extrabold hover:-translate-y-[1px] transition flex items-center justify-center gap-2"
+                >
+                  <i class="fa-solid fa-copy"></i>
+                  <span>Copy Hasil</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- footer info -->
+          <div class="mt-5 flex items-center justify-between text-xs text-slate-600">
+            <div class="flex items-center gap-2">
+              <span class="px-2.5 py-1 rounded-full bg-white/30 border border-white/20">
+                <i class="fa-solid fa-bolt mr-1"></i> On-device
+              </span>
+              <span class="px-2.5 py-1 rounded-full bg-white/30 border border-white/20">
+                <i class="fa-solid fa-leaf mr-1"></i> Corn AI
+              </span>
+            </div>
+            <span class="opacity-80">© 2025</span>
+          </div>
+        </section>
+
+        <!-- tiny note -->
+        <p class="mt-4 text-center text-[11px] text-slate-600/80">
+          Tap video untuk capture • Upload untuk galeri • Model: TFJS GraphModel
+        </p>
+      </div>
+    </main>
 
     <script>
       /* ================= CONFIG ================= */
@@ -76,7 +403,12 @@
       const INPUT_SIZE = 224;
 
       /* ⚠️ URUTAN HARUS SAMA DENGAN class_indices.json */
-      const LABELS = ["Corn_(maize)___Cercospora_leaf_spot Gray_leaf_spot", "Corn_(maize)___Common_rust_", "Corn_(maize)___Northern_Leaf_Blight", "Corn_(maize)___healthy"];
+      const LABELS = [
+        "Corn_(maize)___Cercospora_leaf_spot Gray_leaf_spot",
+        "Corn_(maize)___Common_rust_",
+        "Corn_(maize)___Northern_Leaf_Blight",
+        "Corn_(maize)___healthy",
+      ];
 
       const LABEL_ID = {
         "Corn_(maize)___Cercospora_leaf_spot Gray_leaf_spot": "🟤 Bercak Daun (Cercospora)",
@@ -85,12 +417,23 @@
         "Corn_(maize)___healthy": "🌱 Jagung Sehat",
       };
 
+      const LABEL_DESC = {
+        "Corn_(maize)___Cercospora_leaf_spot Gray_leaf_spot":
+          "Biasanya muncul bercak abu-abu/coklat memanjang. Coba foto daun yang paling jelas bercaknya.",
+        "Corn_(maize)___Common_rust_":
+          "Bercak kecil seperti pustula/karat oranye. Pastikan fokus dan cahaya cukup.",
+        "Corn_(maize)___Northern_Leaf_Blight":
+          "Lesi memanjang seperti ‘cerutu’ pada daun. Foto dari jarak sedang agar pola terlihat.",
+        "Corn_(maize)___healthy":
+          "Daun terlihat hijau merata tanpa bercak signifikan. Tetap pantau kondisi lapangan.",
+      };
+
       /* ================= STATE ================= */
       let model = null;
       let stream = null;
       let imageSource = null;
 
-      /* ================= ELEMENT ================= */
+      /* ================= ELEMENTS ================= */
       const video = document.getElementById("video");
       const previewImg = document.getElementById("previewImg");
       const analyzeBtn = document.getElementById("analyzeBtn");
@@ -98,13 +441,89 @@
       const resultBox = document.getElementById("resultBox");
       const resultLabel = document.getElementById("resultLabel");
       const resultConf = document.getElementById("resultConf");
+      const resultSub = document.getElementById("resultSub");
       const cameraStatus = document.getElementById("cameraStatus");
       const fileInput = document.getElementById("fileInput");
+      const progressBar = document.getElementById("progressBar");
+      const loadingPct = document.getElementById("loadingPct");
+      const topList = document.getElementById("topList");
+      const reTakeBtn = document.getElementById("reTakeBtn");
+      const copyBtn = document.getElementById("copyBtn");
+
+      const toast = document.getElementById("toast");
+      const toastText = document.getElementById("toastText");
+      const toastSub = document.getElementById("toastSub");
+      const toastIcon = document.getElementById("toastIcon");
+      const toastClose = document.getElementById("toastClose");
+
+      /* ================= UI HELPERS ================= */
+      function showToast(title, sub, type = "info") {
+        toastText.textContent = title;
+        toastSub.textContent = sub;
+
+        const iconMap = {
+          info: "fa-circle-info",
+          ok: "fa-circle-check",
+          warn: "fa-triangle-exclamation",
+          err: "fa-circle-xmark",
+        };
+        toastIcon.innerHTML = `<i class="fa-solid ${iconMap[type] || iconMap.info}"></i>`;
+
+        toast.classList.add("show");
+        clearTimeout(showToast._t);
+        showToast._t = setTimeout(() => toast.classList.remove("show"), 3600);
+      }
+      toastClose.onclick = () => toast.classList.remove("show");
+
+      // ripple coords
+      document.addEventListener("pointerdown", (e) => {
+        const el = e.target.closest(".ripple");
+        if (!el) return;
+        const r = el.getBoundingClientRect();
+        el.style.setProperty("--x", `${((e.clientX - r.left) / r.width) * 100}%`);
+        el.style.setProperty("--y", `${((e.clientY - r.top) / r.height) * 100}%`);
+      });
+
+      /* ================= 3D TILT ================= */
+      const tiltCard = document.getElementById("tiltCard");
+      function setTilt(x, y) {
+        const rx = (y - 0.5) * -10;
+        const ry = (x - 0.5) * 10;
+        tiltCard.style.transform = `perspective(900px) rotateX(${rx}deg) rotateY(${ry}deg) translateZ(0)`;
+      }
+
+      // pointer tilt
+      tiltCard.addEventListener("pointermove", (e) => {
+        const r = tiltCard.getBoundingClientRect();
+        const x = (e.clientX - r.left) / r.width;
+        const y = (e.clientY - r.top) / r.height;
+        setTilt(x, y);
+      });
+      tiltCard.addEventListener("pointerleave", () => {
+        tiltCard.style.transform = "perspective(900px) rotateX(0deg) rotateY(0deg)";
+      });
+
+      // gyroscope tilt (mobile)
+      window.addEventListener("deviceorientation", (e) => {
+        if (!e.gamma && !e.beta) return;
+        const x = Math.min(1, Math.max(0, (e.gamma + 45) / 90)); // -45..45
+        const y = Math.min(1, Math.max(0, (e.beta + 45) / 90));
+        setTilt(x, y);
+      });
 
       /* ================= LOAD MODEL ================= */
       (async () => {
-        model = await tf.loadGraphModel(MODEL_URL);
-        console.log("✅ Model berhasil dimuat");
+        try {
+          showToast("Memuat model AI…", "Tunggu sebentar ya, model sedang disiapkan.", "info");
+          model = await tf.loadGraphModel(MODEL_URL);
+          showToast("Model siap ✅", "Silakan ambil foto atau upload gambar daun.", "ok");
+          console.log("✅ Model berhasil dimuat");
+        } catch (e) {
+          console.error(e);
+          showToast("Gagal memuat model", "Cek path MODEL_URL dan file model.json.", "err");
+          cameraStatus.innerHTML =
+            "<b>🚫 Model gagal dimuat.</b><br/><span class='text-xs'>Periksa folder <b>model/</b> dan path MODEL_URL.</span>";
+        }
       })();
 
       /* ================= CAMERA ================= */
@@ -125,12 +544,15 @@
           analyzeBtn.style.display = "none";
           resultBox.style.display = "none";
 
-          cameraStatus.innerText = "📸 Kamera aktif. Ketuk layar untuk ambil foto.";
-          cameraStatus.style.display = "block";
+          cameraStatus.innerHTML =
+            "<div class='flex items-start gap-3'><div class='text-emerald-700 text-lg mt-0.5'><i class='fa-solid fa-video'></i></div><div class='flex-1'><p class='font-bold'>Kamera aktif.</p><p class='text-xs text-slate-600 mt-0.5'>Tap video untuk ambil foto. Pastikan daun terlihat jelas.</p></div></div>";
+
+          showToast("Kamera aktif 📸", "Tap video untuk capture gambar.", "ok");
         } catch (err) {
-          cameraStatus.innerText = "🚫 Kamera tidak dapat dibuka.\n" + "Pastikan izin kamera diaktifkan di Safari.";
-          cameraStatus.style.display = "block";
           console.error(err);
+          cameraStatus.innerHTML =
+            "<div class='flex items-start gap-3'><div class='text-red-600 text-lg mt-0.5'><i class='fa-solid fa-ban'></i></div><div class='flex-1'><p class='font-bold'>Kamera tidak dapat dibuka.</p><p class='text-xs text-slate-600 mt-0.5'>Pastikan izin kamera aktif di browser (Safari/Chrome).</p></div></div>";
+          showToast("Kamera gagal dibuka", "Cek izin kamera di browser kamu.", "err");
         }
       }
 
@@ -147,14 +569,20 @@
         video.style.display = "none";
         previewImg.style.display = "block";
         analyzeBtn.style.display = "block";
+        resultBox.style.display = "none";
 
         if (stream) stream.getTracks().forEach((t) => t.stop());
+
+        showToast("Foto tersimpan", "Klik ANALISIS untuk mulai deteksi.", "info");
       };
 
       /* ================= UPLOAD ================= */
       fileInput.onchange = (e) => {
+        const f = e.target.files?.[0];
+        if (!f) return;
+
         const img = new Image();
-        img.src = URL.createObjectURL(e.target.files[0]);
+        img.src = URL.createObjectURL(f);
         img.onload = () => {
           imageSource = img;
           previewImg.src = img.src;
@@ -162,6 +590,7 @@
           video.style.display = "none";
           analyzeBtn.style.display = "block";
           resultBox.style.display = "none";
+          showToast("Gambar di-upload", "Klik ANALISIS untuk mulai deteksi.", "info");
         };
       };
 
@@ -177,35 +606,130 @@
         return c;
       }
 
+      function topK(scores, k = 2) {
+        const arr = scores.map((v, i) => ({ i, v }));
+        arr.sort((a, b) => b.v - a.v);
+        return arr.slice(0, k);
+      }
+
+      function renderTopList(scores) {
+        const items = topK(scores, 2);
+        topList.innerHTML = items
+          .map((it) => {
+            const labelEN = LABELS[it.i];
+            const labelID = LABEL_ID[labelEN] || labelEN;
+            const pct = (it.v * 100).toFixed(2);
+            return `
+              <div class="p-3 rounded-2xl bg-white/25 border border-white/20">
+                <div class="flex items-center justify-between gap-3">
+                  <div class="text-sm font-extrabold text-slate-800">${labelID}</div>
+                  <div class="text-xs font-black text-emerald-800">${pct}%</div>
+                </div>
+                <div class="mt-2 progress-track rounded-full overflow-hidden h-2">
+                  <div class="h-2 rounded-full bg-emerald-500" style="width:${Math.min(100, Math.max(0, it.v*100))}%"></div>
+                </div>
+                <div class="text-[11px] text-slate-600 mt-2">(${labelEN})</div>
+              </div>
+            `;
+          })
+          .join("");
+      }
+
       /* ================= PREDICT ================= */
       analyzeBtn.onclick = async () => {
-        if (!model || !imageSource) return;
+        if (!model) return showToast("Model belum siap", "Tunggu model selesai dimuat.", "warn");
+        if (!imageSource) return showToast("Belum ada gambar", "Ambil foto atau upload dulu ya.", "warn");
 
         analyzeBtn.style.display = "none";
         loadingBox.style.display = "block";
         resultBox.style.display = "none";
+        progressBar.style.width = "0%";
+        loadingPct.textContent = "0%";
 
-        await new Promise(requestAnimationFrame);
-        await new Promise((r) => setTimeout(r, 120));
+        // fake smooth progress while computing (UX)
+        let p = 0;
+        const t = setInterval(() => {
+          p = Math.min(92, p + Math.random() * 10);
+          progressBar.style.width = `${p.toFixed(0)}%`;
+          loadingPct.textContent = `${p.toFixed(0)}%`;
+        }, 180);
 
-        const cropped = centerCrop(imageSource);
+        try {
+          await new Promise(requestAnimationFrame);
+          await new Promise((r) => setTimeout(r, 120));
 
-        const tensor = tf.browser.fromPixels(cropped).resizeBilinear([INPUT_SIZE, INPUT_SIZE]).toFloat().div(255).expandDims(0);
+          const cropped = centerCrop(imageSource);
 
-        const scores = await model.predict(tensor).data();
-        const idx = scores.indexOf(Math.max(...scores));
+          const tensor = tf.browser
+            .fromPixels(cropped)
+            .resizeBilinear([INPUT_SIZE, INPUT_SIZE])
+            .toFloat()
+            .div(255)
+            .expandDims(0);
 
-        const labelEN = LABELS[idx];
-        resultLabel.innerHTML = LABEL_ID[labelEN] + `<div class="text-xs text-slate-600 mt-1">(${labelEN})</div>`;
+          const scores = await model.predict(tensor).data();
+          const idx = scores.indexOf(Math.max(...scores));
 
-        resultConf.innerText = `Tingkat Keyakinan: ${(scores[idx] * 100).toFixed(2)}%`;
+          const labelEN = LABELS[idx];
+          const labelID = LABEL_ID[labelEN] || labelEN;
 
-        tensor.dispose();
+          resultLabel.innerHTML = `${labelID}`;
+          resultConf.textContent = `Tingkat Keyakinan: ${(scores[idx] * 100).toFixed(2)}%`;
+          resultSub.textContent = LABEL_DESC[labelEN] || "Gunakan foto yang lebih jelas untuk hasil lebih akurat.";
 
-        loadingBox.style.display = "none";
-        resultBox.style.display = "block";
-        analyzeBtn.style.display = "block";
+          renderTopList(Array.from(scores));
+
+          tensor.dispose();
+
+          clearInterval(t);
+          progressBar.style.width = "100%";
+          loadingPct.textContent = "100%";
+
+          setTimeout(() => {
+            loadingBox.style.display = "none";
+            resultBox.style.display = "block";
+            analyzeBtn.style.display = "block";
+            showToast("Analisis selesai ✅", "Scroll hasil & kamu bisa copy ringkasannya.", "ok");
+          }, 220);
+        } catch (e) {
+          console.error(e);
+          clearInterval(t);
+          loadingBox.style.display = "none";
+          analyzeBtn.style.display = "block";
+          showToast("Analisis gagal", "Coba ulangi atau cek kompatibilitas model TFJS.", "err");
+        }
+      };
+
+      /* ================= RESULT ACTIONS ================= */
+      reTakeBtn.onclick = () => {
+        imageSource = null;
+        previewImg.style.display = "none";
+        resultBox.style.display = "none";
+        analyzeBtn.style.display = "none";
+        showToast("Siap ulangi", "Klik Kamera atau Upload gambar baru.", "info");
+      };
+
+      copyBtn.onclick = async () => {
+        const text =
+          `Hasil Deteksi: ${resultLabel.textContent}\n` +
+          `${resultConf.textContent}\n` +
+          `${resultSub.textContent}`;
+
+        try {
+          await navigator.clipboard.writeText(text);
+          showToast("Tersalin 📋", "Hasil berhasil di-copy ke clipboard.", "ok");
+        } catch {
+          // fallback
+          const ta = document.createElement("textarea");
+          ta.value = text;
+          document.body.appendChild(ta);
+          ta.select();
+          document.execCommand("copy");
+          document.body.removeChild(ta);
+          showToast("Tersalin 📋", "Hasil berhasil di-copy (fallback).", "ok");
+        }
       };
     </script>
   </body>
 </html>
+jjal lebokno vercel
